@@ -1,11 +1,11 @@
 package com.teambind.co.kr.chatdding.adapter.in.web.controller;
 
 import com.teambind.co.kr.chatdding.adapter.in.web.dto.ApiResponse;
-import com.teambind.co.kr.chatdding.adapter.in.web.dto.GetMessagesResponse;
-import com.teambind.co.kr.chatdding.adapter.in.web.dto.MarkAsReadRequest;
-import com.teambind.co.kr.chatdding.adapter.in.web.dto.MarkAsReadResponse;
-import com.teambind.co.kr.chatdding.adapter.in.web.dto.SendMessageRequest;
-import com.teambind.co.kr.chatdding.adapter.in.web.dto.SendMessageResponse;
+import com.teambind.co.kr.chatdding.adapter.in.web.dto.response.GetMessagesResponse;
+import com.teambind.co.kr.chatdding.adapter.in.web.dto.request.MarkAsReadRequest;
+import com.teambind.co.kr.chatdding.adapter.in.web.dto.response.MarkAsReadResponse;
+import com.teambind.co.kr.chatdding.adapter.in.web.dto.request.SendMessageRequest;
+import com.teambind.co.kr.chatdding.adapter.in.web.dto.response.SendMessageResponse;
 import com.teambind.co.kr.chatdding.application.port.in.GetMessagesQuery;
 import com.teambind.co.kr.chatdding.application.port.in.GetMessagesResult;
 import com.teambind.co.kr.chatdding.application.port.in.GetMessagesUseCase;

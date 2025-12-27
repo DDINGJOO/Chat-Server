@@ -2,11 +2,16 @@ package com.teambind.co.kr.chatdding.adapter.in.web.controller;
 
 import com.teambind.co.kr.chatdding.adapter.in.web.dto.ApiResponse;
 import com.teambind.co.kr.chatdding.adapter.in.web.dto.GetMessagesResponse;
+import com.teambind.co.kr.chatdding.adapter.in.web.dto.MarkAsReadRequest;
+import com.teambind.co.kr.chatdding.adapter.in.web.dto.MarkAsReadResponse;
 import com.teambind.co.kr.chatdding.adapter.in.web.dto.SendMessageRequest;
 import com.teambind.co.kr.chatdding.adapter.in.web.dto.SendMessageResponse;
 import com.teambind.co.kr.chatdding.application.port.in.GetMessagesQuery;
 import com.teambind.co.kr.chatdding.application.port.in.GetMessagesResult;
 import com.teambind.co.kr.chatdding.application.port.in.GetMessagesUseCase;
+import com.teambind.co.kr.chatdding.application.port.in.MarkAsReadCommand;
+import com.teambind.co.kr.chatdding.application.port.in.MarkAsReadResult;
+import com.teambind.co.kr.chatdding.application.port.in.MarkAsReadUseCase;
 import com.teambind.co.kr.chatdding.application.port.in.SendMessageResult;
 import com.teambind.co.kr.chatdding.application.port.in.SendMessageUseCase;
 import jakarta.validation.Valid;
@@ -32,6 +37,7 @@ public class MessageController {
 
     private final SendMessageUseCase sendMessageUseCase;
     private final GetMessagesUseCase getMessagesUseCase;
+    private final MarkAsReadUseCase markAsReadUseCase;
 
     /**
      * 메시지 전송
@@ -70,5 +76,25 @@ public class MessageController {
         );
 
         return ResponseEntity.ok(ApiResponse.success(GetMessagesResponse.from(result)));
+    }
+
+    /**
+     * 읽음 처리
+     *
+     * POST /api/v1/rooms/{roomId}/messages/read
+     */
+    @PostMapping("/read")
+    public ResponseEntity<ApiResponse<MarkAsReadResponse>> markAsRead(
+            @PathVariable String roomId,
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestBody(required = false) MarkAsReadRequest request
+    ) {
+        MarkAsReadResult result = markAsReadUseCase.execute(
+                request != null
+                        ? request.toCommand(roomId, userId)
+                        : MarkAsReadCommand.of(roomId, userId)
+        );
+
+        return ResponseEntity.ok(ApiResponse.success(MarkAsReadResponse.from(result)));
     }
 }

@@ -1,4 +1,4 @@
-package com.teambind.co.kr.chatdding.adapter.in.web.dto;
+package com.teambind.co.kr.chatdding.adapter.in.web.dto.response;
 
 import com.teambind.co.kr.chatdding.application.port.in.SendMessageResult;
 

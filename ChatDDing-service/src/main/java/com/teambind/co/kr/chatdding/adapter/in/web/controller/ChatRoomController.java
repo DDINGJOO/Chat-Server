@@ -1,8 +1,8 @@
 package com.teambind.co.kr.chatdding.adapter.in.web.controller;
 
 import com.teambind.co.kr.chatdding.adapter.in.web.dto.ApiResponse;
-import com.teambind.co.kr.chatdding.adapter.in.web.dto.GetChatRoomDetailResponse;
-import com.teambind.co.kr.chatdding.adapter.in.web.dto.GetChatRoomsResponse;
+import com.teambind.co.kr.chatdding.adapter.in.web.dto.response.GetChatRoomDetailResponse;
+import com.teambind.co.kr.chatdding.adapter.in.web.dto.response.GetChatRoomsResponse;
 import com.teambind.co.kr.chatdding.application.port.in.GetChatRoomDetailQuery;
 import com.teambind.co.kr.chatdding.application.port.in.GetChatRoomDetailResult;
 import com.teambind.co.kr.chatdding.application.port.in.GetChatRoomDetailUseCase;

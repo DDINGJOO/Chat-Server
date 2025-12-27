@@ -1,19 +1,25 @@
 package com.teambind.co.kr.chatdding.adapter.in.web.controller;
 
 import com.teambind.co.kr.chatdding.adapter.in.web.dto.ApiResponse;
+import com.teambind.co.kr.chatdding.adapter.in.web.dto.GetMessagesResponse;
 import com.teambind.co.kr.chatdding.adapter.in.web.dto.SendMessageRequest;
 import com.teambind.co.kr.chatdding.adapter.in.web.dto.SendMessageResponse;
+import com.teambind.co.kr.chatdding.application.port.in.GetMessagesQuery;
+import com.teambind.co.kr.chatdding.application.port.in.GetMessagesResult;
+import com.teambind.co.kr.chatdding.application.port.in.GetMessagesUseCase;
 import com.teambind.co.kr.chatdding.application.port.in.SendMessageResult;
 import com.teambind.co.kr.chatdding.application.port.in.SendMessageUseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -25,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class MessageController {
 
     private final SendMessageUseCase sendMessageUseCase;
+    private final GetMessagesUseCase getMessagesUseCase;
 
     /**
      * 메시지 전송
@@ -44,5 +51,24 @@ public class MessageController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(SendMessageResponse.from(result)));
+    }
+
+    /**
+     * 메시지 목록 조회 (커서 기반 페이징)
+     *
+     * GET /api/v1/rooms/{roomId}/messages
+     */
+    @GetMapping
+    public ResponseEntity<ApiResponse<GetMessagesResponse>> getMessages(
+            @PathVariable String roomId,
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(defaultValue = "50") Integer limit
+    ) {
+        GetMessagesResult result = getMessagesUseCase.execute(
+                GetMessagesQuery.of(roomId, userId, cursor, limit)
+        );
+
+        return ResponseEntity.ok(ApiResponse.success(GetMessagesResponse.from(result)));
     }
 }

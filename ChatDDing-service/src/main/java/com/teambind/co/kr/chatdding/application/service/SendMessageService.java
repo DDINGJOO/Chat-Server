@@ -3,17 +3,22 @@ package com.teambind.co.kr.chatdding.application.service;
 import com.teambind.co.kr.chatdding.application.port.in.SendMessageCommand;
 import com.teambind.co.kr.chatdding.application.port.in.SendMessageResult;
 import com.teambind.co.kr.chatdding.application.port.in.SendMessageUseCase;
+import com.teambind.co.kr.chatdding.application.port.out.EventPublisher;
 import com.teambind.co.kr.chatdding.common.exception.ChatException;
 import com.teambind.co.kr.chatdding.common.exception.ErrorCode;
 import com.teambind.co.kr.chatdding.common.util.generator.PrimaryKeyGenerator;
 import com.teambind.co.kr.chatdding.domain.chatroom.ChatRoom;
 import com.teambind.co.kr.chatdding.domain.chatroom.ChatRoomRepository;
+import com.teambind.co.kr.chatdding.domain.common.UserId;
+import com.teambind.co.kr.chatdding.domain.event.MessageSentEvent;
 import com.teambind.co.kr.chatdding.domain.message.Message;
 import com.teambind.co.kr.chatdding.domain.message.MessageId;
 import com.teambind.co.kr.chatdding.domain.message.MessageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * 메시지 전송 UseCase 구현
@@ -26,6 +31,7 @@ public class SendMessageService implements SendMessageUseCase {
     private final ChatRoomRepository chatRoomRepository;
     private final MessageRepository messageRepository;
     private final PrimaryKeyGenerator primaryKeyGenerator;
+    private final EventPublisher eventPublisher;
 
     @Override
     public SendMessageResult execute(SendMessageCommand command) {
@@ -34,6 +40,8 @@ public class SendMessageService implements SendMessageUseCase {
 
         Message message = createAndSaveMessage(command);
         updateChatRoomLastMessageAt(chatRoom, message);
+
+        publishMessageSentEvent(chatRoom, message, command);
 
         return SendMessageResult.from(message);
     }
@@ -69,5 +77,15 @@ public class SendMessageService implements SendMessageUseCase {
     private void updateChatRoomLastMessageAt(ChatRoom chatRoom, Message message) {
         chatRoom.updateLastMessageAt(message.getCreatedAt());
         chatRoomRepository.save(chatRoom);
+    }
+
+    private void publishMessageSentEvent(ChatRoom chatRoom, Message message, SendMessageCommand command) {
+        List<Long> recipientIds = chatRoom.getParticipantIds().stream()
+                .filter(userId -> !userId.equals(command.senderId()))
+                .map(UserId::getValue)
+                .toList();
+
+        MessageSentEvent event = MessageSentEvent.from(message, recipientIds);
+        eventPublisher.publish(event);
     }
 }

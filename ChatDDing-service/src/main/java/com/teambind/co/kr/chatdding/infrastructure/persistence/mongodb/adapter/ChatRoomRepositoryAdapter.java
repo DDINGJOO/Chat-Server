@@ -70,4 +70,27 @@ public class ChatRoomRepositoryAdapter implements ChatRoomRepository {
     public void deleteById(RoomId roomId) {
         mongoRepository.deleteById(roomId.getValue());
     }
+
+    @Override
+    public Optional<ChatRoom> findPlaceInquiryByPlaceIdAndGuestId(Long placeId, UserId guestId) {
+        return mongoRepository.findByTypeAndContext_ContextIdAndParticipantIdsContaining(
+                        ChatRoomType.PLACE_INQUIRY, placeId, guestId.getValue())
+                .map(ChatRoomDocument::toDomain);
+    }
+
+    @Override
+    public List<ChatRoom> findPlaceInquiriesByHostId(UserId hostId, Long placeId) {
+        if (placeId != null) {
+            return mongoRepository.findByTypeAndOwnerIdAndContext_ContextIdOrderByLastMessageAtDesc(
+                            ChatRoomType.PLACE_INQUIRY, hostId.getValue(), placeId)
+                    .stream()
+                    .map(ChatRoomDocument::toDomain)
+                    .toList();
+        }
+        return mongoRepository.findByTypeAndOwnerIdOrderByLastMessageAtDesc(
+                        ChatRoomType.PLACE_INQUIRY, hostId.getValue())
+                .stream()
+                .map(ChatRoomDocument::toDomain)
+                .toList();
+    }
 }

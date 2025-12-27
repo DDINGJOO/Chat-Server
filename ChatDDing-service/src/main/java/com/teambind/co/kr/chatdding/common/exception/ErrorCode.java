@@ -26,6 +26,9 @@ public enum ErrorCode {
     // Support Errors
     SUPPORT_ALREADY_IN_PROGRESS("CHAT_010", HttpStatus.CONFLICT, "이미 진행 중인 상담이 있습니다"),
 
+    // Inquiry Errors
+    DUPLICATE_INQUIRY("CHAT_011", HttpStatus.CONFLICT, "해당 공간에 이미 문의 채팅방이 존재합니다"),
+
     // Internal Errors
     INTERNAL_SERVER_ERROR("CHAT_500", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다");
 

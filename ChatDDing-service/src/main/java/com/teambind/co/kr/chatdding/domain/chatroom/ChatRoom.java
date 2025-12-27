@@ -27,11 +27,12 @@ public class ChatRoom {
     private ChatRoomStatus status;
     private final LocalDateTime createdAt;
     private LocalDateTime lastMessageAt;
+    private final ChatRoomContext context;
 
     private ChatRoom(RoomId id, ChatRoomType type, String name,
                      List<Participant> participants, UserId ownerId,
                      ChatRoomStatus status, LocalDateTime createdAt,
-                     LocalDateTime lastMessageAt) {
+                     LocalDateTime lastMessageAt, ChatRoomContext context) {
         this.id = id;
         this.type = type;
         this.name = name;
@@ -40,6 +41,7 @@ public class ChatRoom {
         this.status = status;
         this.createdAt = createdAt;
         this.lastMessageAt = lastMessageAt;
+        this.context = context;
     }
 
     /**
@@ -64,7 +66,8 @@ public class ChatRoom {
                 senderId,
                 ChatRoomStatus.ACTIVE,
                 now,
-                now
+                now,
+                null
         );
     }
 
@@ -94,7 +97,8 @@ public class ChatRoom {
                 ownerId,
                 ChatRoomStatus.ACTIVE,
                 now,
-                now
+                now,
+                null
         );
     }
 
@@ -116,7 +120,43 @@ public class ChatRoom {
                 userId,
                 ChatRoomStatus.ACTIVE,
                 now,
-                now
+                now,
+                null
+        );
+    }
+
+    /**
+     * 공간 문의 채팅방 생성
+     *
+     * @param id       Snowflake로 생성된 RoomId
+     * @param guestId  문의자 (게스트) ID
+     * @param hostId   호스트 ID
+     * @param context  공간 컨텍스트 정보
+     */
+    public static ChatRoom createPlaceInquiry(RoomId id, UserId guestId, UserId hostId, ChatRoomContext context) {
+        if (context == null) {
+            throw new IllegalArgumentException("context must not be null for PLACE_INQUIRY");
+        }
+        if (!context.isPlaceContext()) {
+            throw new IllegalArgumentException("context must be PLACE type for PLACE_INQUIRY");
+        }
+
+        List<Participant> participants = List.of(
+                Participant.create(guestId),
+                Participant.create(hostId)
+        );
+
+        LocalDateTime now = LocalDateTime.now();
+        return new ChatRoom(
+                id,
+                ChatRoomType.PLACE_INQUIRY,
+                context.contextName(),
+                participants,
+                hostId,
+                ChatRoomStatus.ACTIVE,
+                now,
+                now,
+                context
         );
     }
 
@@ -126,8 +166,8 @@ public class ChatRoom {
     public static ChatRoom restore(RoomId id, ChatRoomType type, String name,
                                     List<Participant> participants, UserId ownerId,
                                     ChatRoomStatus status, LocalDateTime createdAt,
-                                    LocalDateTime lastMessageAt) {
-        return new ChatRoom(id, type, name, participants, ownerId, status, createdAt, lastMessageAt);
+                                    LocalDateTime lastMessageAt, ChatRoomContext context) {
+        return new ChatRoom(id, type, name, participants, ownerId, status, createdAt, lastMessageAt, context);
     }
 
     /**

@@ -20,4 +20,22 @@ public interface ChatRoomMongoRepository extends MongoRepository<ChatRoomDocumen
 
     Optional<ChatRoomDocument> findByTypeAndSortedParticipantIds(
             ChatRoomType type, List<Long> sortedParticipantIds);
+
+    /**
+     * 공간 문의 중복 체크: 동일 게스트-공간 조합 조회
+     */
+    Optional<ChatRoomDocument> findByTypeAndContext_ContextIdAndParticipantIdsContaining(
+            ChatRoomType type, Long contextId, Long participantId);
+
+    /**
+     * 호스트의 공간 문의 목록 조회
+     */
+    List<ChatRoomDocument> findByTypeAndOwnerIdOrderByLastMessageAtDesc(
+            ChatRoomType type, Long ownerId);
+
+    /**
+     * 호스트의 특정 공간 문의 목록 조회
+     */
+    List<ChatRoomDocument> findByTypeAndOwnerIdAndContext_ContextIdOrderByLastMessageAtDesc(
+            ChatRoomType type, Long ownerId, Long contextId);
 }

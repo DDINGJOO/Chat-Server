@@ -49,4 +49,22 @@ public interface ChatRoomRepository {
      * 채팅방 삭제
      */
     void deleteById(RoomId roomId);
+
+    /**
+     * 공간 문의 중복 체크: 동일한 게스트-공간 조합의 문의가 존재하는지 확인
+     *
+     * @param placeId 공간 ID
+     * @param guestId 게스트 ID
+     * @return 기존 문의 채팅방 (있는 경우)
+     */
+    Optional<ChatRoom> findPlaceInquiryByPlaceIdAndGuestId(Long placeId, UserId guestId);
+
+    /**
+     * 호스트의 공간 문의 목록 조회
+     *
+     * @param hostId  호스트 ID
+     * @param placeId 공간 ID (nullable, 필터링용)
+     * @return 문의 채팅방 목록
+     */
+    List<ChatRoom> findPlaceInquiriesByHostId(UserId hostId, Long placeId);
 }

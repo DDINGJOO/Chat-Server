@@ -1,6 +1,7 @@
 package com.teambind.co.kr.chatdding.infrastructure.persistence.mongodb.document;
 
 import com.teambind.co.kr.chatdding.domain.chatroom.ChatRoom;
+import com.teambind.co.kr.chatdding.domain.chatroom.ChatRoomContext;
 import com.teambind.co.kr.chatdding.domain.chatroom.ChatRoomStatus;
 import com.teambind.co.kr.chatdding.domain.chatroom.ChatRoomType;
 import com.teambind.co.kr.chatdding.domain.chatroom.Participant;
@@ -56,6 +57,8 @@ public class ChatRoomDocument {
     @Indexed
     private LocalDateTime lastMessageAt;
 
+    private ChatRoomContextDocument context;
+
     public static ChatRoomDocument from(ChatRoom chatRoom) {
         List<ParticipantDocument> participantDocs = chatRoom.getParticipants().stream()
                 .map(ParticipantDocument::from)
@@ -76,6 +79,7 @@ public class ChatRoomDocument {
                 .status(chatRoom.getStatus())
                 .createdAt(chatRoom.getCreatedAt())
                 .lastMessageAt(chatRoom.getLastMessageAt())
+                .context(ChatRoomContextDocument.from(chatRoom.getContext()))
                 .build();
     }
 
@@ -83,6 +87,8 @@ public class ChatRoomDocument {
         List<Participant> domainParticipants = participants.stream()
                 .map(ParticipantDocument::toDomain)
                 .toList();
+
+        ChatRoomContext domainContext = context != null ? context.toDomain() : null;
 
         return ChatRoom.restore(
                 RoomId.of(id),
@@ -92,7 +98,8 @@ public class ChatRoomDocument {
                 UserId.of(ownerId),
                 status,
                 createdAt,
-                lastMessageAt
+                lastMessageAt,
+                domainContext
         );
     }
 }

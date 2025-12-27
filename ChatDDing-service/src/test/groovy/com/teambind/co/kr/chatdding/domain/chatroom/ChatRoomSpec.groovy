@@ -268,7 +268,7 @@ class ChatRoomSpec extends Specification {
         def lastMessageAt = LocalDateTime.of(2024, 1, 1, 12, 0)
 
         when:
-        def chatRoom = ChatRoom.restore(roomId, type, name, participants, ownerId, status, createdAt, lastMessageAt)
+        def chatRoom = ChatRoom.restore(roomId, type, name, participants, ownerId, status, createdAt, lastMessageAt, null)
 
         then:
         chatRoom.id == roomId
@@ -279,6 +279,7 @@ class ChatRoomSpec extends Specification {
         chatRoom.status == status
         chatRoom.createdAt == createdAt
         chatRoom.lastMessageAt == lastMessageAt
+        chatRoom.context == null
     }
 
     def "참여자 목록은 불변이다"() {
@@ -290,5 +291,96 @@ class ChatRoomSpec extends Specification {
 
         then:
         thrown(UnsupportedOperationException)
+    }
+
+    // ========================
+    // PLACE_INQUIRY 채팅방 생성 테스트
+    // ========================
+
+    def "createPlaceInquiry()로 공간 문의 채팅방을 생성할 수 있다"() {
+        given:
+        def roomId = RoomId.of(1L)
+        def guestId = UserId.of(100L)
+        def hostId = UserId.of(200L)
+        def context = ChatRoomContext.forPlace(12345L, "강남 스터디룸 A")
+
+        when:
+        def chatRoom = ChatRoom.createPlaceInquiry(roomId, guestId, hostId, context)
+
+        then:
+        chatRoom.id == roomId
+        chatRoom.type == ChatRoomType.PLACE_INQUIRY
+        chatRoom.name == "강남 스터디룸 A"
+        chatRoom.ownerId == hostId
+        chatRoom.status == ChatRoomStatus.ACTIVE
+        chatRoom.participants.size() == 2
+        chatRoom.context == context
+        chatRoom.context.contextType() == ContextType.PLACE
+        chatRoom.context.contextId() == 12345L
+    }
+
+    def "createPlaceInquiry()에 null context를 전달하면 예외가 발생한다"() {
+        given:
+        def roomId = RoomId.of(1L)
+        def guestId = UserId.of(100L)
+        def hostId = UserId.of(200L)
+
+        when:
+        ChatRoom.createPlaceInquiry(roomId, guestId, hostId, null)
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def "createPlaceInquiry()에 PLACE가 아닌 context를 전달하면 예외가 발생한다"() {
+        given:
+        def roomId = RoomId.of(1L)
+        def guestId = UserId.of(100L)
+        def hostId = UserId.of(200L)
+        def context = ChatRoomContext.forOrder(999L, "주문 #999")
+
+        when:
+        ChatRoom.createPlaceInquiry(roomId, guestId, hostId, context)
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def "PLACE_INQUIRY 채팅방에서 게스트와 호스트를 참여자로 찾을 수 있다"() {
+        given:
+        def guestId = UserId.of(100L)
+        def hostId = UserId.of(200L)
+        def context = ChatRoomContext.forPlace(12345L, "강남 스터디룸 A")
+        def chatRoom = ChatRoom.createPlaceInquiry(RoomId.of(1L), guestId, hostId, context)
+
+        expect:
+        chatRoom.isParticipant(guestId) == true
+        chatRoom.isParticipant(hostId) == true
+        chatRoom.participantIds.containsAll([guestId, hostId])
+    }
+
+    def "restore()에 context를 포함하여 복원할 수 있다"() {
+        given:
+        def roomId = RoomId.of(1L)
+        def type = ChatRoomType.PLACE_INQUIRY
+        def name = "강남 스터디룸 A"
+        def participants = [
+                Participant.create(UserId.of(100L)),
+                Participant.create(UserId.of(200L))
+        ]
+        def ownerId = UserId.of(200L)
+        def status = ChatRoomStatus.ACTIVE
+        def createdAt = LocalDateTime.of(2024, 1, 1, 10, 0)
+        def lastMessageAt = LocalDateTime.of(2024, 1, 1, 12, 0)
+        def context = ChatRoomContext.forPlace(12345L, "강남 스터디룸 A")
+
+        when:
+        def chatRoom = ChatRoom.restore(roomId, type, name, participants, ownerId, status, createdAt, lastMessageAt, context)
+
+        then:
+        chatRoom.id == roomId
+        chatRoom.type == ChatRoomType.PLACE_INQUIRY
+        chatRoom.context == context
+        chatRoom.context.contextId() == 12345L
     }
 }

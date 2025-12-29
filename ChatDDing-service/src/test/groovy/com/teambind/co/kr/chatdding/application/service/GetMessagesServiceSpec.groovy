@@ -82,7 +82,7 @@ class GetMessagesServiceSpec extends Specification {
         result.hasMore() == false
     }
 
-    def "삭제된 메시지는 필터링된다"() {
+    def "삭제된 메시지는 마스킹되어 표시된다"() {
         given:
         def query = new GetMessagesQuery(roomId, userId, null, 20)
         def chatRoom = ChatRoom.createDm(roomId, userId, recipientId)
@@ -98,8 +98,13 @@ class GetMessagesServiceSpec extends Specification {
         def result = getMessagesService.execute(query)
 
         then:
-        result.messages().size() == 1
+        result.messages().size() == 2
         result.messages()[0].messageId() == "1"
+        result.messages()[0].content() == "보이는 메시지"
+        result.messages()[0].deleted() == false
+        result.messages()[1].messageId() == "2"
+        result.messages()[1].content() == "삭제된 메시지입니다"
+        result.messages()[1].deleted() == true
     }
 
     def "존재하지 않는 채팅방이면 예외가 발생한다"() {

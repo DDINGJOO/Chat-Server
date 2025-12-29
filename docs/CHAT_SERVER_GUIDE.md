@@ -293,9 +293,8 @@ GET /api/v1/chat/rooms/{roomId}/messages
       "messageId": "msg-uuid-1234",
       "senderId": 123,
       "content": "안녕하세요",
-      "readBy": {
-        "456": "2024-01-15T10:31:00Z"
-      },
+      "readCount": 1,
+      "deleted": false,
       "createdAt": "2024-01-15T10:30:00Z"
     }
   ],
@@ -303,6 +302,14 @@ GET /api/v1/chat/rooms/{roomId}/messages
   "hasMore": true
 }
 ```
+
+**메시지 필드 설명**
+
+| 필드 | 타입 | 설명 |
+|-----|------|------|
+| deleted | Boolean | 삭제된 메시지 여부 |
+| content | String | 삭제된 경우 "삭제된 메시지입니다"로 마스킹됨 |
+| readCount | Integer | 메시지를 읽은 사용자 수 |
 
 #### 읽음 처리
 
@@ -323,17 +330,28 @@ POST /api/v1/chat/rooms/{roomId}/read
 #### 메시지 삭제
 
 ```
-DELETE /api/v1/chat/messages/{messageId}
+DELETE /api/v1/rooms/{roomId}/messages/{messageId}
 ```
+
+**Headers**
+
+| 헤더 | 필수 | 설명 |
+|-----|-----|------|
+| X-User-Id | Y | 요청자 userId |
 
 **Response**
 
 ```json
 {
   "messageId": "msg-uuid-1234",
-  "deleted": true
+  "hardDeleted": false,
+  "deletedAt": "2024-01-15T10:35:00Z"
 }
 ```
+
+**설명**
+- `hardDeleted: false` - 본인만 삭제 (soft delete), 상대방에게는 여전히 보임
+- `hardDeleted: true` - 모든 참여자에게 삭제 (발신자가 일정 시간 내 삭제 시)
 
 ### 4.2 채팅방
 
@@ -612,8 +630,12 @@ GET /api/v1/chat/inquiry/host
 | Topic | Producer | Consumer | 설명 |
 |-------|----------|----------|------|
 | chat-message-sent | Chat Server | NOTIFICATION | 새 메시지 알림 |
+| chat-message-read | Chat Server | NOTIFICATION | 메시지 읽음 처리 |
+| chat-message-deleted | Chat Server | NOTIFICATION | 메시지 삭제 알림 |
 | chat-inquiry-created | Chat Server | NOTIFICATION | 공간 문의 생성 알림 |
 | support-requested | Chat Server | NOTIFICATION | 상담 요청 알림 |
+| support-agent-assigned | Chat Server | NOTIFICATION | 상담원 배정 알림 |
+| support-closed | Chat Server | NOTIFICATION | 상담 종료 알림 |
 
 ### 5.2 이벤트 페이로드
 
@@ -670,6 +692,22 @@ GET /api/v1/chat/inquiry/host
 }
 ```
 
+#### chat-message-deleted
+
+```json
+{
+  "eventId": "evt-uuid-7890",
+  "eventType": "MESSAGE_DELETED",
+  "timestamp": "2024-01-15T10:35:00Z",
+  "payload": {
+    "roomId": "room-uuid-5678",
+    "messageId": "msg-uuid-1234",
+    "deletedBy": 123,
+    "hardDeleted": true
+  }
+}
+```
+
 ---
 
 ## 6. 비즈니스 규칙
@@ -689,7 +727,9 @@ GET /api/v1/chat/inquiry/host
 | 규칙 | 설명 |
 |-----|------|
 | 최대 길이 | 5,000자 |
-| 삭제 | 본인 화면에서만 삭제 (서버 보관) |
+| Soft Delete | 요청자 화면에서만 삭제, 상대방에게는 보임 |
+| Hard Delete | 발신자가 일정 시간 내 삭제 시 모든 참여자에게 삭제 |
+| 마스킹 | 삭제된 메시지는 "삭제된 메시지입니다"로 표시 |
 | 수정 | 불가 |
 
 ### 6.3 읽음 처리 규칙
@@ -919,7 +959,10 @@ db.message.createIndex({ "roomId": 1, "createdAt": 1 })
 | CHAT_008 | 400 | 수신자가 지정되지 않음 |
 | CHAT_009 | 400 | 그룹 채팅 최대 인원 초과 |
 | CHAT_010 | 409 | 이미 진행 중인 상담이 있음 |
-| DUPLICATE_INQUIRY | 409 | 이미 해당 공간에 대한 문의 채팅방 존재 |
+| CHAT_011 | 409 | 이미 해당 공간에 대한 문의 채팅방 존재 |
+| CHAT_012 | 409 | 이미 종료된 채팅방 |
+| CHAT_013 | 400 | 상담 채팅방이 아님 |
+| CHAT_014 | 409 | 이미 상담원이 배정됨 |
 
 ---
 
@@ -927,17 +970,18 @@ db.message.createIndex({ "roomId": 1, "createdAt": 1 })
 
 ### Phase 1 - 핵심 기능
 
-- 메시지 전송 (채팅방 자동 생성)
-- 메시지 조회 (페이징)
-- 채팅방 목록 조회
-- 읽음 처리
-- Kafka 이벤트 발행
+- ✅ 메시지 전송 (채팅방 자동 생성)
+- ✅ 메시지 조회 (페이징)
+- ✅ 메시지 삭제 (soft delete / hard delete)
+- ✅ 채팅방 목록 조회
+- ✅ 읽음 처리
+- ✅ Kafka 이벤트 발행
 
 ### Phase 2 - 확장 기능
 
-- 공간 문의 (PLACE_INQUIRY) - 완료
-- Redis 캐싱 (Unread Count) - 완료
-- 고객 상담 (상담 요청, 배정, 종료)
+- ✅ 공간 문의 (PLACE_INQUIRY)
+- ✅ Redis 캐싱 (Unread Count)
+- ✅ 고객 상담 (상담 요청, 배정, 종료)
 - 그룹 채팅
 - 알림 설정 (채팅방별 on/off)
 

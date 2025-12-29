@@ -32,9 +32,8 @@ public class GetMessagesService implements GetMessagesUseCase {
         validateAccess(query);
 
         List<Message> messages = fetchMessages(query);
-        List<Message> visibleMessages = filterVisibleMessages(messages, query.userId());
 
-        return GetMessagesResult.of(visibleMessages, query.limit());
+        return GetMessagesResult.of(messages, query.userId(), query.limit());
     }
 
     private void validateAccess(GetMessagesQuery query) {
@@ -62,9 +61,4 @@ public class GetMessagesService implements GetMessagesUseCase {
         );
     }
 
-    private List<Message> filterVisibleMessages(List<Message> messages, UserId userId) {
-        return messages.stream()
-                .filter(message -> message.isVisibleTo(userId))
-                .toList();
-    }
 }

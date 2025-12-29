@@ -1,5 +1,6 @@
 package com.teambind.co.kr.chatdding.application.port.in;
 
+import com.teambind.co.kr.chatdding.domain.common.UserId;
 import com.teambind.co.kr.chatdding.domain.message.Message;
 
 import java.time.LocalDateTime;
@@ -14,9 +15,11 @@ public record GetMessagesResult(
         boolean hasMore
 ) {
 
-    public static GetMessagesResult of(List<Message> messages, int requestedLimit) {
+    private static final String DELETED_MESSAGE_CONTENT = "삭제된 메시지입니다";
+
+    public static GetMessagesResult of(List<Message> messages, UserId requesterId, int requestedLimit) {
         List<MessageItem> items = messages.stream()
-                .map(MessageItem::from)
+                .map(message -> MessageItem.from(message, requesterId))
                 .toList();
 
         boolean hasMore = messages.size() >= requestedLimit;
@@ -33,15 +36,20 @@ public record GetMessagesResult(
             Long senderId,
             String content,
             int readCount,
+            boolean deleted,
             LocalDateTime createdAt
     ) {
-        public static MessageItem from(Message message) {
+        public static MessageItem from(Message message, UserId requesterId) {
+            boolean isDeleted = message.isDeletedFor(requesterId);
+            String displayContent = isDeleted ? DELETED_MESSAGE_CONTENT : message.getContent();
+
             return new MessageItem(
                     message.getId().toStringValue(),
                     message.getRoomId().toStringValue(),
                     message.getSenderId().getValue(),
-                    message.getContent(),
+                    displayContent,
                     message.getReadCount(),
+                    isDeleted,
                     message.getCreatedAt()
             );
         }

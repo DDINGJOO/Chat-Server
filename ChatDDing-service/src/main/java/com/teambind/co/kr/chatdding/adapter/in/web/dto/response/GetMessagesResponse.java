@@ -22,6 +22,7 @@ public record GetMessagesResponse(
                         m.senderId(),
                         m.content(),
                         m.readCount(),
+                        m.deleted(),
                         m.createdAt()
                 ))
                 .toList();
@@ -35,6 +36,7 @@ public record GetMessagesResponse(
             Long senderId,
             String content,
             int readCount,
+            boolean deleted,
             LocalDateTime createdAt
     ) {}
 }

@@ -2,6 +2,7 @@ package com.teambind.co.kr.chatdding.adapter.in.web.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.teambind.co.kr.chatdding.adapter.in.web.GlobalExceptionHandler
+import com.teambind.co.kr.chatdding.application.port.in.DeleteMessageUseCase
 import com.teambind.co.kr.chatdding.application.port.in.GetMessagesResult
 import com.teambind.co.kr.chatdding.application.port.in.GetMessagesUseCase
 import com.teambind.co.kr.chatdding.application.port.in.MarkAsReadResult
@@ -28,6 +29,7 @@ class MessageControllerSpec extends Specification {
     SendMessageUseCase sendMessageUseCase = Mock()
     GetMessagesUseCase getMessagesUseCase = Mock()
     MarkAsReadUseCase markAsReadUseCase = Mock()
+    DeleteMessageUseCase deleteMessageUseCase = Mock()
     ObjectMapper objectMapper = new ObjectMapper()
 
     @Subject
@@ -36,7 +38,7 @@ class MessageControllerSpec extends Specification {
     MockMvc mockMvc
 
     def setup() {
-        messageController = new MessageController(sendMessageUseCase, getMessagesUseCase, markAsReadUseCase)
+        messageController = new MessageController(sendMessageUseCase, getMessagesUseCase, markAsReadUseCase, deleteMessageUseCase)
         mockMvc = MockMvcBuilders.standaloneSetup(messageController)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build()
@@ -142,8 +144,8 @@ class MessageControllerSpec extends Specification {
         def roomId = "123"
         def userId = 100L
         def messages = [
-                new GetMessagesResult.MessageItem("msg1", roomId, userId, "메시지1", 1, LocalDateTime.now()),
-                new GetMessagesResult.MessageItem("msg2", roomId, userId, "메시지2", 2, LocalDateTime.now())
+                new GetMessagesResult.MessageItem("msg1", roomId, userId, "메시지1", 1, false, LocalDateTime.now()),
+                new GetMessagesResult.MessageItem("msg2", roomId, userId, "메시지2", 2, false, LocalDateTime.now())
         ]
         def result = new GetMessagesResult(messages, "msg1", true)
 

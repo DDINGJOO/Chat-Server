@@ -1,11 +1,15 @@
 package com.teambind.co.kr.chatdding.adapter.in.web.controller;
 
 import com.teambind.co.kr.chatdding.adapter.in.web.dto.ApiResponse;
-import com.teambind.co.kr.chatdding.adapter.in.web.dto.response.GetMessagesResponse;
 import com.teambind.co.kr.chatdding.adapter.in.web.dto.request.MarkAsReadRequest;
-import com.teambind.co.kr.chatdding.adapter.in.web.dto.response.MarkAsReadResponse;
 import com.teambind.co.kr.chatdding.adapter.in.web.dto.request.SendMessageRequest;
+import com.teambind.co.kr.chatdding.adapter.in.web.dto.response.DeleteMessageResponse;
+import com.teambind.co.kr.chatdding.adapter.in.web.dto.response.GetMessagesResponse;
+import com.teambind.co.kr.chatdding.adapter.in.web.dto.response.MarkAsReadResponse;
 import com.teambind.co.kr.chatdding.adapter.in.web.dto.response.SendMessageResponse;
+import com.teambind.co.kr.chatdding.application.port.in.DeleteMessageCommand;
+import com.teambind.co.kr.chatdding.application.port.in.DeleteMessageResult;
+import com.teambind.co.kr.chatdding.application.port.in.DeleteMessageUseCase;
 import com.teambind.co.kr.chatdding.application.port.in.GetMessagesQuery;
 import com.teambind.co.kr.chatdding.application.port.in.GetMessagesResult;
 import com.teambind.co.kr.chatdding.application.port.in.GetMessagesUseCase;
@@ -18,6 +22,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,6 +43,7 @@ public class MessageController {
     private final SendMessageUseCase sendMessageUseCase;
     private final GetMessagesUseCase getMessagesUseCase;
     private final MarkAsReadUseCase markAsReadUseCase;
+    private final DeleteMessageUseCase deleteMessageUseCase;
 
     /**
      * 메시지 전송
@@ -96,5 +102,23 @@ public class MessageController {
         );
 
         return ResponseEntity.ok(ApiResponse.success(MarkAsReadResponse.from(result)));
+    }
+
+    /**
+     * 메시지 삭제
+     *
+     * DELETE /api/v1/rooms/{roomId}/messages/{messageId}
+     */
+    @DeleteMapping("/{messageId}")
+    public ResponseEntity<ApiResponse<DeleteMessageResponse>> deleteMessage(
+            @PathVariable String roomId,
+            @PathVariable String messageId,
+            @RequestHeader("X-User-Id") Long userId
+    ) {
+        DeleteMessageResult result = deleteMessageUseCase.execute(
+                DeleteMessageCommand.of(roomId, messageId, userId)
+        );
+
+        return ResponseEntity.ok(ApiResponse.success(DeleteMessageResponse.from(result)));
     }
 }

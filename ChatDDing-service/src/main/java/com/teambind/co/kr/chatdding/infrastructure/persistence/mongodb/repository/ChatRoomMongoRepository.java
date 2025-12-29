@@ -38,4 +38,14 @@ public interface ChatRoomMongoRepository extends MongoRepository<ChatRoomDocumen
      */
     List<ChatRoomDocument> findByTypeAndOwnerIdAndContext_ContextIdOrderByLastMessageAtDesc(
             ChatRoomType type, Long ownerId, Long contextId);
+
+    /**
+     * 상담원 미배정 상담 대기열 조회 (참여자 1명 = 상담원 미배정)
+     */
+    List<ChatRoomDocument> findPendingSupportRooms(String cursor, int limit);
+
+    /**
+     * 상담원 미배정 상담 대기열 수 조회
+     */
+    long countPendingSupportRooms();
 }

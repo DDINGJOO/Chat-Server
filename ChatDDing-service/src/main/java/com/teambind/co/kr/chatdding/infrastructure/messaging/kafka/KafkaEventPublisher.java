@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.teambind.co.kr.chatdding.application.port.out.EventPublisher;
 import com.teambind.co.kr.chatdding.domain.event.ChatEvent;
 import com.teambind.co.kr.chatdding.domain.event.InquiryCreatedEvent;
+import com.teambind.co.kr.chatdding.domain.event.MessageDeletedEvent;
 import com.teambind.co.kr.chatdding.domain.event.MessageReadEvent;
 import com.teambind.co.kr.chatdding.domain.event.MessageSentEvent;
 import com.teambind.co.kr.chatdding.domain.event.SupportAgentAssignedEvent;
@@ -25,6 +26,7 @@ public class KafkaEventPublisher implements EventPublisher {
 
     private static final String TOPIC_MESSAGE_SENT = "chat-message-sent";
     private static final String TOPIC_MESSAGE_READ = "chat-message-read";
+    private static final String TOPIC_MESSAGE_DELETED = "chat-message-deleted";
     private static final String TOPIC_SUPPORT_REQUESTED = "support-requested";
     private static final String TOPIC_SUPPORT_AGENT_ASSIGNED = "support-agent-assigned";
     private static final String TOPIC_SUPPORT_CLOSED = "support-closed";
@@ -64,6 +66,7 @@ public class KafkaEventPublisher implements EventPublisher {
         return switch (event) {
             case MessageSentEvent ignored -> TOPIC_MESSAGE_SENT;
             case MessageReadEvent ignored -> TOPIC_MESSAGE_READ;
+            case MessageDeletedEvent ignored -> TOPIC_MESSAGE_DELETED;
             case SupportRequestCreatedEvent ignored -> TOPIC_SUPPORT_REQUESTED;
             case SupportAgentAssignedEvent ignored -> TOPIC_SUPPORT_AGENT_ASSIGNED;
             case SupportChatClosedEvent ignored -> TOPIC_SUPPORT_CLOSED;
@@ -75,6 +78,7 @@ public class KafkaEventPublisher implements EventPublisher {
         return switch (event) {
             case MessageSentEvent e -> e.roomId();
             case MessageReadEvent e -> e.roomId();
+            case MessageDeletedEvent e -> e.roomId();
             case SupportRequestCreatedEvent e -> e.roomId();
             case SupportAgentAssignedEvent e -> e.roomId();
             case SupportChatClosedEvent e -> e.roomId();

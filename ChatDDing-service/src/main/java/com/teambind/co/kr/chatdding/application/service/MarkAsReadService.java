@@ -3,6 +3,7 @@ package com.teambind.co.kr.chatdding.application.service;
 import com.teambind.co.kr.chatdding.application.port.in.MarkAsReadCommand;
 import com.teambind.co.kr.chatdding.application.port.in.MarkAsReadResult;
 import com.teambind.co.kr.chatdding.application.port.in.MarkAsReadUseCase;
+import com.teambind.co.kr.chatdding.application.port.out.UnreadCountCachePort;
 import com.teambind.co.kr.chatdding.common.exception.ChatException;
 import com.teambind.co.kr.chatdding.common.exception.ErrorCode;
 import com.teambind.co.kr.chatdding.domain.chatroom.ChatRoom;
@@ -27,6 +28,7 @@ public class MarkAsReadService implements MarkAsReadUseCase {
 
     private final ChatRoomRepository chatRoomRepository;
     private final MessageRepository messageRepository;
+    private final UnreadCountCachePort unreadCountCachePort;
 
     @Override
     public MarkAsReadResult execute(MarkAsReadCommand command) {
@@ -37,6 +39,7 @@ public class MarkAsReadService implements MarkAsReadUseCase {
         int readCount = markMessagesAsRead(unreadMessages, command, readAt);
 
         updateParticipantLastReadAt(chatRoom, command, readAt);
+        resetUnreadCountCache(command);
 
         return MarkAsReadResult.of(
                 command.roomId().toStringValue(),
@@ -93,5 +96,9 @@ public class MarkAsReadService implements MarkAsReadUseCase {
                     participant.updateLastReadAt(readAt);
                     chatRoomRepository.save(chatRoom);
                 });
+    }
+
+    private void resetUnreadCountCache(MarkAsReadCommand command) {
+        unreadCountCachePort.resetUnreadCount(command.roomId(), command.userId());
     }
 }

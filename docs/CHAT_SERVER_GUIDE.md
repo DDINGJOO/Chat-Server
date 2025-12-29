@@ -12,6 +12,7 @@ Chat-Server는 플랫폼 내 사용자 간 실시간 메시징 기능을 제공�
 |-----|------|
 | 1:1 DM | 사용자 간 개인 대화 |
 | 그룹 채팅 | 다수 사용자가 참여하는 대화 |
+| 공간 문의 | 게스트가 호스트에게 특정 공간에 대해 문의 |
 | 고객 상담 | 운영팀과 사용자 간 문의 처리 |
 | 읽음 확인 | 메시지 읽음 상태 표시 |
 | 푸시 알림 | 새 메시지 알림 (NOTIFICATION 서버 연동) |
@@ -127,16 +128,25 @@ flowchart TD
 erDiagram
     ChatRoom ||--o{ Message : contains
     ChatRoom ||--o{ Participant : has
+    ChatRoom ||--o| ChatRoomContext : has
 
     ChatRoom {
         string id PK
-        enum type "DM, GROUP, SUPPORT"
+        enum type "DM, GROUP, PLACE_INQUIRY, SUPPORT"
         string name "nullable"
         array participantIds
         long ownerId
         enum status "ACTIVE, CLOSED"
+        object context "nullable"
         datetime createdAt
         datetime lastMessageAt
+    }
+
+    ChatRoomContext {
+        enum contextType "PLACE, ORDER, BOOKING"
+        long contextId
+        string contextName
+        map metadata "optional"
     }
 
     Message {
@@ -166,13 +176,23 @@ erDiagram
 | 필드 | 타입 | 필수 | 설명 |
 |-----|------|-----|------|
 | id | String | Y | UUID |
-| type | Enum | Y | DM, GROUP, SUPPORT |
+| type | Enum | Y | DM, GROUP, PLACE_INQUIRY, SUPPORT |
 | name | String | N | 그룹 채팅방 이름 |
 | participantIds | List<Long> | Y | 참여자 userId 목록 |
 | ownerId | Long | Y | 방장 또는 상담원 userId |
 | status | Enum | Y | ACTIVE, CLOSED |
+| context | Object | N | 컨텍스트 정보 (PLACE_INQUIRY 필수) |
 | createdAt | DateTime | Y | 생성 시간 |
 | lastMessageAt | DateTime | Y | 마지막 메시지 시간 |
+
+#### ChatRoomContext (Embedded)
+
+| 필드 | 타입 | 필수 | 설명 |
+|-----|------|-----|------|
+| contextType | Enum | Y | PLACE, ORDER, BOOKING |
+| contextId | Long | Y | 연결된 도메인 ID (공간ID, 주문ID 등) |
+| contextName | String | N | 표시용 이름 |
+| metadata | Map | N | 추가 메타데이터 |
 
 #### Message
 
@@ -480,6 +500,109 @@ POST /api/v1/chat/support/{roomId}/close
 }
 ```
 
+### 4.4 공간 문의
+
+#### 공간 문의 생성
+
+게스트가 특정 공간에 대해 호스트에게 문의를 시작합니다. 동일 게스트-공간 조합의 중복 문의는 불가합니다.
+
+```
+POST /api/v1/chat/inquiry
+```
+
+**Headers**
+
+| 헤더 | 필수 | 설명 |
+|-----|-----|------|
+| X-User-Id | Y | 게스트 userId |
+
+**Request**
+
+| 필드 | 타입 | 필수 | 설명 |
+|-----|------|-----|------|
+| placeId | Long | Y | 문의 대상 공간 ID |
+| placeName | String | Y | 공간 이름 (표시용) |
+| hostId | Long | Y | 호스트 userId |
+| initialMessage | String | N | 초기 메시지 (선택) |
+
+**Request Example**
+
+```json
+{
+  "placeId": 12345,
+  "placeName": "강남 스터디룸 A",
+  "hostId": 200,
+  "initialMessage": "예약 문의드립니다"
+}
+```
+
+**Response**
+
+```json
+{
+  "roomId": "1234567890123456789",
+  "type": "PLACE_INQUIRY",
+  "context": {
+    "contextType": "PLACE",
+    "contextId": 12345,
+    "contextName": "강남 스터디룸 A"
+  },
+  "createdAt": "2024-01-15T10:00:00Z"
+}
+```
+
+**Error Responses**
+
+| 코드 | HTTP Status | 설명 |
+|-----|-------------|------|
+| DUPLICATE_INQUIRY | 409 | 이미 해당 공간에 대한 문의 채팅방 존재 |
+
+#### 호스트 문의 목록 조회
+
+호스트가 받은 공간 문의 목록을 조회합니다. 특정 공간으로 필터링할 수 있습니다.
+
+```
+GET /api/v1/chat/inquiry/host
+```
+
+**Headers**
+
+| 헤더 | 필수 | 설명 |
+|-----|-----|------|
+| X-User-Id | Y | 호스트 userId |
+
+**Query Parameters**
+
+| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
+|---------|------|-----|-------|------|
+| placeId | Long | N | null | 특정 공간으로 필터 |
+| cursor | String | N | null | 페이징 커서 |
+| limit | Integer | N | 20 | 조회 개수 |
+
+**Response**
+
+```json
+{
+  "inquiries": [
+    {
+      "roomId": "1234567890123456789",
+      "guestId": 100,
+      "guestNickname": "홍길동",
+      "context": {
+        "contextType": "PLACE",
+        "contextId": 12345,
+        "contextName": "강남 스터디룸 A"
+      },
+      "lastMessage": "예약 문의드립니다",
+      "unreadCount": 1,
+      "lastMessageAt": "2024-01-15T10:00:00Z"
+    }
+  ],
+  "nextCursor": "1234567890123456788",
+  "hasMore": false
+}
+```
+
 ---
 
 ## 5. 이벤트 명세
@@ -489,6 +612,7 @@ POST /api/v1/chat/support/{roomId}/close
 | Topic | Producer | Consumer | 설명 |
 |-------|----------|----------|------|
 | chat-message-sent | Chat Server | NOTIFICATION | 새 메시지 알림 |
+| chat-inquiry-created | Chat Server | NOTIFICATION | 공간 문의 생성 알림 |
 | support-requested | Chat Server | NOTIFICATION | 상담 요청 알림 |
 
 ### 5.2 이벤트 페이로드
@@ -507,6 +631,26 @@ POST /api/v1/chat/support/{roomId}/close
     "recipientIds": [456],
     "contentPreview": "안녕하세요",
     "roomType": "DM"
+  }
+}
+```
+
+#### chat-inquiry-created
+
+```json
+{
+  "eventId": "evt-uuid-3456",
+  "eventType": "INQUIRY_CREATED",
+  "timestamp": "2024-01-15T10:00:00Z",
+  "payload": {
+    "roomId": "1234567890123456789",
+    "guestId": 100,
+    "hostId": 200,
+    "context": {
+      "contextType": "PLACE",
+      "contextId": 12345,
+      "contextName": "강남 스터디룸 A"
+    }
   }
 }
 ```
@@ -532,12 +676,13 @@ POST /api/v1/chat/support/{roomId}/close
 
 ### 6.1 채팅방 유형별 규칙
 
-| 규칙 | DM | GROUP | SUPPORT |
-|-----|-----|-------|---------|
-| 최대 참여자 | 2명 | 100명 | 2명 (사용자 + 상담원) |
-| 중복 생성 | 불가 (동일 참여자) | 허용 | 허용 |
-| 방장 권한 | 없음 | 초대/강퇴 | 상담원만 종료 가능 |
-| 나가기 | 가능 | 가능 | 불가 (종료만 가능) |
+| 규칙 | DM | GROUP | PLACE_INQUIRY | SUPPORT |
+|-----|-----|-------|---------------|---------|
+| 최대 참여자 | 2명 | 100명 | 2명 (게스트 + 호스트) | 2명 (사용자 + 상담원) |
+| 중복 생성 | 불가 (동일 참여자) | 허용 | 불가 (동일 게스트-공간) | 허용 |
+| 방장 권한 | 없음 | 초대/강퇴 | 없음 | 상담원만 종료 가능 |
+| 나가기 | 가능 | 가능 | 가능 | 불가 (종료만 가능) |
+| 컨텍스트 | 없음 | 없음 | 필수 (공간 정보) | 없음 |
 
 ### 6.2 메시지 규칙
 
@@ -623,6 +768,12 @@ db.chatRoom.createIndex(
   { "type": 1, "status": 1, "createdAt": 1 },
   { partialFilterExpression: { "type": "SUPPORT" } }
 )
+
+// PLACE_INQUIRY 중복 체크 (게스트-공간 조합)
+db.chatRoom.createIndex(
+  { "type": 1, "context.contextType": 1, "context.contextId": 1, "participantIds": 1 },
+  { unique: true, partialFilterExpression: { "type": "PLACE_INQUIRY" } }
+)
 ```
 
 #### Message Collection
@@ -651,6 +802,7 @@ db.message.createIndex({ "roomId": 1, "createdAt": 1 })
 | CHAT_008 | 400 | 수신자가 지정되지 않음 |
 | CHAT_009 | 400 | 그룹 채팅 최대 인원 초과 |
 | CHAT_010 | 409 | 이미 진행 중인 상담이 있음 |
+| DUPLICATE_INQUIRY | 409 | 이미 해당 공간에 대한 문의 채팅방 존재 |
 
 ---
 
@@ -666,6 +818,7 @@ db.message.createIndex({ "roomId": 1, "createdAt": 1 })
 
 ### Phase 2 - 확장 기능
 
+- 공간 문의 (PLACE_INQUIRY) - 완료
 - 고객 상담 (상담 요청, 배정, 종료)
 - 그룹 채팅
 - 알림 설정 (채팅방별 on/off)
@@ -703,3 +856,26 @@ List<Long> sortedIds = Stream.of(senderId, recipientId)
 - 사용자가 메시지를 삭제하면 deletedBy 배열에 userId 추가
 - 해당 사용자에게는 메시지가 조회되지 않음
 - 서버에는 메시지가 영구 보관됨 (법적 요구사항 대응)
+
+### 11.4 공간 문의 (PLACE_INQUIRY)
+
+게스트가 특정 공간에 대해 호스트에게 문의할 때 사용되는 채팅방 유형이다.
+
+**주요 특징**:
+- 게스트-공간 조합으로 중복 문의 방지
+- ChatRoomContext를 통해 공간 정보 연결
+- 호스트가 어떤 공간에 대한 문의인지 즉시 확인 가능
+
+**중복 체크 로직**:
+```java
+// 동일 게스트가 동일 공간에 문의한 채팅방이 있는지 확인
+Optional<ChatRoom> existing = chatRoomRepository
+    .findPlaceInquiryByPlaceIdAndGuestId(placeId, guestId);
+```
+
+**컨텍스트 타입**:
+| 타입 | 설명 | 사용 예 |
+|-----|------|--------|
+| PLACE | 공간 문의 | 스터디룸, 회의실 등 |
+| ORDER | 주문 관련 | (추후 확장) |
+| BOOKING | 예약 관련 | (추후 확장) |

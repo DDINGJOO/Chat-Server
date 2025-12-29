@@ -26,8 +26,7 @@ import java.time.LocalDateTime
 @SpringBootTest
 @EmbeddedKafka(
         partitions = 1,
-        topics = ["chat-message-sent", "chat-message-read", "support-requested", "support-agent-assigned", "support-closed"],
-        brokerProperties = ["listeners=PLAINTEXT://localhost:9093", "port=9093"]
+        topics = ["chat-message-sent", "chat-message-read", "support-requested", "support-agent-assigned", "support-closed"]
 )
 @ActiveProfiles("test")
 class KafkaEventPublisherSpec extends Specification {
@@ -184,7 +183,7 @@ class KafkaEventPublisherSpec extends Specification {
 
     def "SupportRequestCreatedEvent를 support-requested 토픽으로 발행한다"() {
         given:
-        def event = SupportRequestCreatedEvent.from("123", 100L, "결제 문의")
+        def event = new SupportRequestCreatedEvent("123", 100L, "결제 문의", LocalDateTime.now())
 
         def consumerProps = KafkaTestUtils.consumerProps("test-group-support-req", "true", embeddedKafkaBroker)
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
@@ -213,7 +212,7 @@ class KafkaEventPublisherSpec extends Specification {
 
     def "SupportAgentAssignedEvent를 support-agent-assigned 토픽으로 발행한다"() {
         given:
-        def event = SupportAgentAssignedEvent.from("123", 100L, 999L)
+        def event = new SupportAgentAssignedEvent("123", 100L, 999L, LocalDateTime.now())
 
         def consumerProps = KafkaTestUtils.consumerProps("test-group-support-assign", "true", embeddedKafkaBroker)
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
@@ -241,7 +240,7 @@ class KafkaEventPublisherSpec extends Specification {
 
     def "SupportChatClosedEvent를 support-closed 토픽으로 발행한다"() {
         given:
-        def event = SupportChatClosedEvent.from("123", 100L, 999L)
+        def event = new SupportChatClosedEvent("123", 100L, 999L, LocalDateTime.now())
 
         def consumerProps = KafkaTestUtils.consumerProps("test-group-support-close", "true", embeddedKafkaBroker)
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)

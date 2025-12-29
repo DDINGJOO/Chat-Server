@@ -67,4 +67,20 @@ public interface ChatRoomRepository {
      * @return 문의 채팅방 목록
      */
     List<ChatRoom> findPlaceInquiriesByHostId(UserId hostId, Long placeId);
+
+    /**
+     * 상담원 미배정 상담 채팅방 목록 조회 (대기열)
+     *
+     * @param cursor 페이지네이션 커서 (마지막 roomId)
+     * @param limit  조회 개수
+     * @return 대기 중인 상담 채팅방 목록
+     */
+    List<ChatRoom> findPendingSupportRooms(String cursor, int limit);
+
+    /**
+     * 상담원 미배정 상담 채팅방 수 조회
+     *
+     * @return 대기 중인 상담 수
+     */
+    long countPendingSupportRooms();
 }

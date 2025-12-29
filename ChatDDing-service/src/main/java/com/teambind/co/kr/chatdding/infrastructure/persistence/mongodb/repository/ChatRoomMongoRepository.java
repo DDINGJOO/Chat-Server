@@ -11,7 +11,7 @@ import java.util.Optional;
 /**
  * ChatRoom Spring Data MongoDB Repository
  */
-public interface ChatRoomMongoRepository extends MongoRepository<ChatRoomDocument, Long> {
+public interface ChatRoomMongoRepository extends MongoRepository<ChatRoomDocument, Long>, ChatRoomMongoRepositoryCustom {
 
     List<ChatRoomDocument> findByParticipantIdsContaining(Long userId);
 
@@ -38,4 +38,5 @@ public interface ChatRoomMongoRepository extends MongoRepository<ChatRoomDocumen
      */
     List<ChatRoomDocument> findByTypeAndOwnerIdAndContext_ContextIdOrderByLastMessageAtDesc(
             ChatRoomType type, Long ownerId, Long contextId);
+
 }

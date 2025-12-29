@@ -3,6 +3,9 @@ package com.teambind.co.kr.chatdding.infrastructure.messaging.kafka
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.teambind.co.kr.chatdding.domain.event.MessageReadEvent
 import com.teambind.co.kr.chatdding.domain.event.MessageSentEvent
+import com.teambind.co.kr.chatdding.domain.event.SupportAgentAssignedEvent
+import com.teambind.co.kr.chatdding.domain.event.SupportChatClosedEvent
+import com.teambind.co.kr.chatdding.domain.event.SupportRequestCreatedEvent
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.common.serialization.StringDeserializer
@@ -23,7 +26,7 @@ import java.time.LocalDateTime
 @SpringBootTest
 @EmbeddedKafka(
         partitions = 1,
-        topics = ["chat-message-sent", "chat-message-read"],
+        topics = ["chat-message-sent", "chat-message-read", "support-requested", "support-agent-assigned", "support-closed"],
         brokerProperties = ["listeners=PLAINTEXT://localhost:9093", "port=9093"]
 )
 @ActiveProfiles("test")
@@ -174,6 +177,91 @@ class KafkaEventPublisherSpec extends Specification {
         json.get("messageId").asText() == "123"
         json.get("roomId").asText() == "456"
         json.get("eventType").asText() == "MESSAGE_SENT"
+
+        cleanup:
+        consumer?.close()
+    }
+
+    def "SupportRequestCreatedEvent를 support-requested 토픽으로 발행한다"() {
+        given:
+        def event = SupportRequestCreatedEvent.from("123", 100L, "결제 문의")
+
+        def consumerProps = KafkaTestUtils.consumerProps("test-group-support-req", "true", embeddedKafkaBroker)
+        consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
+        consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
+        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
+
+        def consumerFactory = new DefaultKafkaConsumerFactory<String, String>(consumerProps)
+        def consumer = consumerFactory.createConsumer()
+        embeddedKafkaBroker.consumeFromAnEmbeddedTopic(consumer, "support-requested")
+
+        when:
+        kafkaEventPublisher.publish(event)
+
+        then:
+        ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer, Duration.ofSeconds(5))
+        records.count() >= 1
+
+        def record = records.iterator().next()
+        record.key() == "123"
+        record.value().contains("SUPPORT_REQUEST_CREATED")
+        record.value().contains("결제 문의")
+
+        cleanup:
+        consumer?.close()
+    }
+
+    def "SupportAgentAssignedEvent를 support-agent-assigned 토픽으로 발행한다"() {
+        given:
+        def event = SupportAgentAssignedEvent.from("123", 100L, 999L)
+
+        def consumerProps = KafkaTestUtils.consumerProps("test-group-support-assign", "true", embeddedKafkaBroker)
+        consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
+        consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
+        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
+
+        def consumerFactory = new DefaultKafkaConsumerFactory<String, String>(consumerProps)
+        def consumer = consumerFactory.createConsumer()
+        embeddedKafkaBroker.consumeFromAnEmbeddedTopic(consumer, "support-agent-assigned")
+
+        when:
+        kafkaEventPublisher.publish(event)
+
+        then:
+        ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer, Duration.ofSeconds(5))
+        records.count() >= 1
+
+        def record = records.iterator().next()
+        record.key() == "123"
+        record.value().contains("SUPPORT_AGENT_ASSIGNED")
+
+        cleanup:
+        consumer?.close()
+    }
+
+    def "SupportChatClosedEvent를 support-closed 토픽으로 발행한다"() {
+        given:
+        def event = SupportChatClosedEvent.from("123", 100L, 999L)
+
+        def consumerProps = KafkaTestUtils.consumerProps("test-group-support-close", "true", embeddedKafkaBroker)
+        consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
+        consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
+        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
+
+        def consumerFactory = new DefaultKafkaConsumerFactory<String, String>(consumerProps)
+        def consumer = consumerFactory.createConsumer()
+        embeddedKafkaBroker.consumeFromAnEmbeddedTopic(consumer, "support-closed")
+
+        when:
+        kafkaEventPublisher.publish(event)
+
+        then:
+        ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer, Duration.ofSeconds(5))
+        records.count() >= 1
+
+        def record = records.iterator().next()
+        record.key() == "123"
+        record.value().contains("SUPPORT_CHAT_CLOSED")
 
         cleanup:
         consumer?.close()

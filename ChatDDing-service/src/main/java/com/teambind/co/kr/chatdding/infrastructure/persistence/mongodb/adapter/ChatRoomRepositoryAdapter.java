@@ -93,4 +93,17 @@ public class ChatRoomRepositoryAdapter implements ChatRoomRepository {
                 .map(ChatRoomDocument::toDomain)
                 .toList();
     }
+
+    @Override
+    public List<ChatRoom> findPendingSupportRooms(String cursor, int limit) {
+        return mongoRepository.findPendingSupportRooms(cursor, limit)
+                .stream()
+                .map(ChatRoomDocument::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countPendingSupportRooms() {
+        return mongoRepository.countPendingSupportRooms();
+    }
 }

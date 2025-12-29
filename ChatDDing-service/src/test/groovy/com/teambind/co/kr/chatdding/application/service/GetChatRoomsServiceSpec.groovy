@@ -1,6 +1,7 @@
 package com.teambind.co.kr.chatdding.application.service
 
 import com.teambind.co.kr.chatdding.application.port.in.GetChatRoomsQuery
+import com.teambind.co.kr.chatdding.application.port.out.UnreadCountCachePort
 import com.teambind.co.kr.chatdding.domain.chatroom.ChatRoom
 import com.teambind.co.kr.chatdding.domain.chatroom.ChatRoomRepository
 import com.teambind.co.kr.chatdding.domain.chatroom.RoomId
@@ -15,14 +16,20 @@ class GetChatRoomsServiceSpec extends Specification {
 
     ChatRoomRepository chatRoomRepository = Mock()
     MessageRepository messageRepository = Mock()
+    UnreadCountCachePort unreadCountCachePort = Mock()
 
     @Subject
     GetChatRoomsService getChatRoomsService = new GetChatRoomsService(
             chatRoomRepository,
-            messageRepository
+            messageRepository,
+            unreadCountCachePort
     )
 
     def userId = UserId.of(100L)
+
+    def setup() {
+        unreadCountCachePort.getUnreadCounts(_, _) >> [:]
+    }
 
     def "채팅방 목록을 조회할 수 있다"() {
         given:

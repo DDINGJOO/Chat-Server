@@ -1,6 +1,7 @@
 package com.teambind.co.kr.chatdding.application.service
 
 import com.teambind.co.kr.chatdding.application.port.in.MarkAsReadCommand
+import com.teambind.co.kr.chatdding.application.port.out.UnreadCountCachePort
 import com.teambind.co.kr.chatdding.common.exception.ChatException
 import com.teambind.co.kr.chatdding.common.exception.ErrorCode
 import com.teambind.co.kr.chatdding.domain.chatroom.ChatRoom
@@ -17,11 +18,13 @@ class MarkAsReadServiceSpec extends Specification {
 
     ChatRoomRepository chatRoomRepository = Mock()
     MessageRepository messageRepository = Mock()
+    UnreadCountCachePort unreadCountCachePort = Mock()
 
     @Subject
     MarkAsReadService markAsReadService = new MarkAsReadService(
             chatRoomRepository,
-            messageRepository
+            messageRepository,
+            unreadCountCachePort
     )
 
     def roomId = RoomId.of(1L)

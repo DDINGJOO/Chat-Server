@@ -4,6 +4,7 @@ import com.teambind.co.kr.chatdding.application.port.in.SendMessageCommand;
 import com.teambind.co.kr.chatdding.application.port.in.SendMessageResult;
 import com.teambind.co.kr.chatdding.application.port.in.SendMessageUseCase;
 import com.teambind.co.kr.chatdding.application.port.out.EventPublisher;
+import com.teambind.co.kr.chatdding.application.port.out.UnreadCountCachePort;
 import com.teambind.co.kr.chatdding.common.exception.ChatException;
 import com.teambind.co.kr.chatdding.common.exception.ErrorCode;
 import com.teambind.co.kr.chatdding.common.util.generator.PrimaryKeyGenerator;
@@ -32,6 +33,7 @@ public class SendMessageService implements SendMessageUseCase {
     private final MessageRepository messageRepository;
     private final PrimaryKeyGenerator primaryKeyGenerator;
     private final EventPublisher eventPublisher;
+    private final UnreadCountCachePort unreadCountCachePort;
 
     @Override
     public SendMessageResult execute(SendMessageCommand command) {
@@ -42,6 +44,7 @@ public class SendMessageService implements SendMessageUseCase {
         updateChatRoomLastMessageAt(chatRoom, message);
 
         publishMessageSentEvent(chatRoom, message, command);
+        incrementUnreadCountsForRecipients(chatRoom, command.senderId());
 
         return SendMessageResult.from(message);
     }
@@ -87,5 +90,11 @@ public class SendMessageService implements SendMessageUseCase {
 
         MessageSentEvent event = MessageSentEvent.from(message, recipientIds);
         eventPublisher.publish(event);
+    }
+
+    private void incrementUnreadCountsForRecipients(ChatRoom chatRoom, UserId senderId) {
+        chatRoom.getParticipantIds().stream()
+                .filter(userId -> !userId.equals(senderId))
+                .forEach(userId -> unreadCountCachePort.incrementUnreadCount(chatRoom.getId(), userId));
     }
 }

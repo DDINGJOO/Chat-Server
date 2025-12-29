@@ -163,4 +163,21 @@ public class Message {
     public int getReadCount() {
         return readBy.size();
     }
+
+    /**
+     * 삭제한 사용자 수
+     */
+    public int getDeletedByCount() {
+        return deletedBy.size();
+    }
+
+    /**
+     * 모든 참여자가 삭제했는지 확인 (Hard Delete 조건)
+     *
+     * @param participantCount 채팅방 참여자 수
+     * @return true면 물리적 삭제 필요
+     */
+    public boolean shouldHardDelete(int participantCount) {
+        return deletedBy.size() >= participantCount;
+    }
 }

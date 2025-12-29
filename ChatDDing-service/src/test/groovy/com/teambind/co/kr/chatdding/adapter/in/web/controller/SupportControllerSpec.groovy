@@ -219,7 +219,7 @@ class SupportControllerSpec extends Specification {
         1 * assignSupportAgentUseCase.execute(_) >> { throw new ChatException(ErrorCode.ROOM_ALREADY_CLOSED) }
 
         and:
-        response.andExpect(status().isBadRequest())
+        response.andExpect(status().isConflict())
                 .andExpect(jsonPath('$.success').value(false))
     }
 

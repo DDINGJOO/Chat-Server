@@ -2,6 +2,7 @@ package com.teambind.co.kr.chatdding.application.service
 
 import com.teambind.co.kr.chatdding.application.port.in.SendMessageCommand
 import com.teambind.co.kr.chatdding.application.port.out.EventPublisher
+import com.teambind.co.kr.chatdding.application.port.out.UnreadCountCachePort
 import com.teambind.co.kr.chatdding.common.exception.ChatException
 import com.teambind.co.kr.chatdding.common.exception.ErrorCode
 import com.teambind.co.kr.chatdding.common.util.generator.PrimaryKeyGenerator
@@ -22,13 +23,15 @@ class SendMessageServiceSpec extends Specification {
     MessageRepository messageRepository = Mock()
     PrimaryKeyGenerator primaryKeyGenerator = Mock()
     EventPublisher eventPublisher = Mock()
+    UnreadCountCachePort unreadCountCachePort = Mock()
 
     @Subject
     SendMessageService sendMessageService = new SendMessageService(
             chatRoomRepository,
             messageRepository,
             primaryKeyGenerator,
-            eventPublisher
+            eventPublisher,
+            unreadCountCachePort
     )
 
     def roomId = RoomId.of(1L)

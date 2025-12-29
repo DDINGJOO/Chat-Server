@@ -8,8 +8,7 @@ import org.springframework.test.context.ActiveProfiles;
 @SpringBootTest
 @EmbeddedKafka(
 		partitions = 1,
-		topics = {"chat-message-sent", "chat-message-read"},
-		brokerProperties = {"listeners=PLAINTEXT://localhost:9093", "port=9093"}
+		topics = {"chat-message-sent", "chat-message-read"}
 )
 @ActiveProfiles("test")
 class ChatDDingServiceApplicationTests {

@@ -96,7 +96,6 @@ public class ChatRoomRepositoryAdapter implements ChatRoomRepository {
 
     @Override
     public List<ChatRoom> findPendingSupportRooms(String cursor, int limit) {
-        // TODO: Story #85에서 구현
         return mongoRepository.findPendingSupportRooms(cursor, limit)
                 .stream()
                 .map(ChatRoomDocument::toDomain)
@@ -105,7 +104,6 @@ public class ChatRoomRepositoryAdapter implements ChatRoomRepository {
 
     @Override
     public long countPendingSupportRooms() {
-        // TODO: Story #85에서 구현
         return mongoRepository.countPendingSupportRooms();
     }
 }

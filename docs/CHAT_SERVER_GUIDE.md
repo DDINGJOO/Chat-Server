@@ -701,9 +701,126 @@ GET /api/v1/chat/inquiry/host
 
 ---
 
-## 7. API Gateway 연동
+## 7. Redis 캐싱
 
-### 7.1 프로필 정보 병합
+### 7.1 캐시 아키텍처
+
+```mermaid
+flowchart LR
+    subgraph Application
+        SMS[SendMessageService]
+        MRS[MarkAsReadService]
+        GCS[GetChatRoomsService]
+    end
+
+    subgraph Cache Layer
+        PORT[UnreadCountCachePort]
+        REDIS[(Redis)]
+    end
+
+    subgraph Persistence
+        MONGO[(MongoDB)]
+    end
+
+    SMS -->|increment| PORT
+    MRS -->|reset| PORT
+    GCS -->|get| PORT
+    PORT --> REDIS
+    GCS -.->|fallback| MONGO
+```
+
+### 7.2 Unread Count 캐싱
+
+안읽은 메시지 수를 Redis에 캐싱하여 채팅방 목록 조회 성능을 최적화한다.
+
+#### 캐시 설계
+
+| 항목 | 값 |
+|-----|-----|
+| Key Pattern | `unread:{roomId}:{userId}` |
+| Value Type | Integer |
+| TTL | 24시간 |
+
+#### Cache-Aside 패턴
+
+```mermaid
+sequenceDiagram
+    participant S as Service
+    participant R as Redis
+    participant M as MongoDB
+
+    S->>R: GET unread:{roomId}:{userId}
+    alt Cache Hit
+        R-->>S: count 값 반환
+    else Cache Miss
+        R-->>S: null
+        S->>M: countUnreadByRoomIdAndUserId()
+        M-->>S: count 값
+        S->>R: SET unread:{roomId}:{userId} (TTL 24h)
+        R-->>S: OK
+    end
+```
+
+#### 캐시 갱신 시점
+
+| 이벤트 | 동작 | 대상 |
+|-------|------|-----|
+| 메시지 전송 | `INCREMENT` | 모든 수신자 |
+| 읽음 처리 | `SET 0` | 읽음 처리한 사용자 |
+| Cache Miss | `SET count` | 조회한 사용자 |
+
+### 7.3 Graceful Degradation
+
+Redis 장애 시에도 서비스가 정상 동작하도록 Fallback을 구현한다.
+
+```mermaid
+flowchart TD
+    A[캐시 조회] --> B{Redis 응답?}
+    B -->|성공| C[캐시 값 반환]
+    B -->|실패/타임아웃| D[경고 로그]
+    D --> E[MongoDB 조회]
+    E --> F[결과 반환]
+
+    G[캐시 쓰기] --> H{Redis 응답?}
+    H -->|성공| I[완료]
+    H -->|실패| J[경고 로그만 남기고 계속]
+```
+
+#### 장애 처리 정책
+
+| 작업 | 실패 시 동작 | 서비스 영향 |
+|-----|------------|-----------|
+| 조회 (GET) | Optional.empty() 반환 → DB 조회 | 없음 |
+| 쓰기 (SET/INCR) | 로그만 남기고 진행 | 없음 (다음 조회 시 재계산) |
+| 일괄 조회 (MGET) | 빈 Map 반환 → 개별 DB 조회 | 없음 |
+
+### 7.4 Port 인터페이스
+
+```java
+public interface UnreadCountCachePort {
+
+    // 단일 조회 (Cache Miss 시 Optional.empty())
+    Optional<Integer> getUnreadCount(RoomId roomId, UserId userId);
+
+    // 값 설정 (TTL 24시간)
+    void setUnreadCount(RoomId roomId, UserId userId, int count);
+
+    // 증가 (+1)
+    void incrementUnreadCount(RoomId roomId, UserId userId);
+
+    // 리셋 (읽음 처리)
+    void resetUnreadCount(RoomId roomId, UserId userId);
+
+    // 일괄 조회 (Cache Hit된 항목만 반환)
+    Map<RoomId, Integer> getUnreadCounts(List<RoomId> roomIds, UserId userId);
+}
+```
+
+---
+
+## 8. API Gateway 연동
+
+### 8.1 프로필 정보 병합
 
 Chat Server는 userId만 반환하며, API Gateway에서 Profile Server를 조회하여 닉네임과 프로필 이미지를 병합한다.
 
@@ -723,7 +840,7 @@ sequenceDiagram
     GW-->>C: 최종 응답 (닉네임, 프로필 이미지 포함)
 ```
 
-### 7.2 최종 응답 형식
+### 8.2 최종 응답 형식
 
 ```json
 {
@@ -747,9 +864,9 @@ sequenceDiagram
 
 ---
 
-## 8. 인덱스 설계
+## 9. 인덱스 설계
 
-### 8.1 MongoDB 인덱스
+### 9.1 MongoDB 인덱스
 
 #### ChatRoom Collection
 
@@ -788,7 +905,7 @@ db.message.createIndex({ "roomId": 1, "createdAt": 1 })
 
 ---
 
-## 9. 에러 코드
+## 10. 에러 코드
 
 | 코드 | HTTP Status | 설명 |
 |-----|-------------|------|
@@ -806,7 +923,7 @@ db.message.createIndex({ "roomId": 1, "createdAt": 1 })
 
 ---
 
-## 10. 구현 우선순위
+## 11. 구현 우선순위
 
 ### Phase 1 - 핵심 기능
 
@@ -819,6 +936,7 @@ db.message.createIndex({ "roomId": 1, "createdAt": 1 })
 ### Phase 2 - 확장 기능
 
 - 공간 문의 (PLACE_INQUIRY) - 완료
+- Redis 캐싱 (Unread Count) - 완료
 - 고객 상담 (상담 요청, 배정, 종료)
 - 그룹 채팅
 - 알림 설정 (채팅방별 on/off)
@@ -831,9 +949,9 @@ db.message.createIndex({ "roomId": 1, "createdAt": 1 })
 
 ---
 
-## 11. 참고 사항
+## 12. 참고 사항
 
-### 11.1 DM 채팅방 유니크 처리
+### 12.1 DM 채팅방 유니크 처리
 
 두 사용자 간 DM 채팅방은 하나만 존재해야 한다. participantIds를 정렬하여 저장함으로써 유니크 제약을 구현한다.
 
@@ -845,19 +963,19 @@ List<Long> sortedIds = Stream.of(senderId, recipientId)
     .collect(Collectors.toList());
 ```
 
-### 11.2 푸시 알림 조건
+### 12.2 푸시 알림 조건
 
 - 수신자가 채팅방에 현재 접속 중이 아닌 경우에만 푸시 발송
 - 수신자의 알림 설정이 활성화된 경우에만 발송
 - 발신자 본인에게는 푸시 발송하지 않음
 
-### 11.3 메시지 삭제 정책
+### 12.3 메시지 삭제 정책
 
 - 사용자가 메시지를 삭제하면 deletedBy 배열에 userId 추가
 - 해당 사용자에게는 메시지가 조회되지 않음
 - 서버에는 메시지가 영구 보관됨 (법적 요구사항 대응)
 
-### 11.4 공간 문의 (PLACE_INQUIRY)
+### 12.4 공간 문의 (PLACE_INQUIRY)
 
 게스트가 특정 공간에 대해 호스트에게 문의할 때 사용되는 채팅방 유형이다.
 

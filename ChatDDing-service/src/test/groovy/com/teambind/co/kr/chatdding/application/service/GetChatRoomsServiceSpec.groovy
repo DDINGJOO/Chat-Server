@@ -33,7 +33,7 @@ class GetChatRoomsServiceSpec extends Specification {
 
     def "채팅방 목록을 조회할 수 있다"() {
         given:
-        def query = new GetChatRoomsQuery(userId)
+        def query = GetChatRoomsQuery.of(userId.getValue())
         def chatRoom1 = ChatRoom.createDm(RoomId.of(1L), userId, UserId.of(200L))
         def chatRoom2 = ChatRoom.createDm(RoomId.of(2L), userId, UserId.of(300L))
 
@@ -50,7 +50,7 @@ class GetChatRoomsServiceSpec extends Specification {
 
     def "빈 채팅방 목록을 조회할 수 있다"() {
         given:
-        def query = new GetChatRoomsQuery(userId)
+        def query = GetChatRoomsQuery.of(userId.getValue())
         chatRoomRepository.findActiveByParticipantUserIdOrderByLastMessageAtDesc(userId) >> []
 
         when:
@@ -62,7 +62,7 @@ class GetChatRoomsServiceSpec extends Specification {
 
     def "채팅방 목록에 마지막 메시지 정보가 포함된다"() {
         given:
-        def query = new GetChatRoomsQuery(userId)
+        def query = GetChatRoomsQuery.of(userId.getValue())
         def roomId = RoomId.of(1L)
         def chatRoom = ChatRoom.createDm(roomId, userId, UserId.of(200L))
         def lastMessage = Message.create(MessageId.of(1L), roomId, UserId.of(200L), "마지막 메시지")
@@ -80,7 +80,7 @@ class GetChatRoomsServiceSpec extends Specification {
 
     def "채팅방 목록에 읽지 않은 메시지 수가 포함된다"() {
         given:
-        def query = new GetChatRoomsQuery(userId)
+        def query = GetChatRoomsQuery.of(userId.getValue())
         def roomId = RoomId.of(1L)
         def chatRoom = ChatRoom.createDm(roomId, userId, UserId.of(200L))
 
@@ -97,7 +97,7 @@ class GetChatRoomsServiceSpec extends Specification {
 
     def "여러 채팅방의 unreadCount가 각각 조회된다"() {
         given:
-        def query = new GetChatRoomsQuery(userId)
+        def query = GetChatRoomsQuery.of(userId.getValue())
         def room1 = ChatRoom.createDm(RoomId.of(1L), userId, UserId.of(200L))
         def room2 = ChatRoom.createDm(RoomId.of(2L), userId, UserId.of(300L))
 
@@ -117,7 +117,7 @@ class GetChatRoomsServiceSpec extends Specification {
 
     def "마지막 메시지가 없으면 null로 표시된다"() {
         given:
-        def query = new GetChatRoomsQuery(userId)
+        def query = GetChatRoomsQuery.of(userId.getValue())
         def chatRoom = ChatRoom.createDm(RoomId.of(1L), userId, UserId.of(200L))
 
         chatRoomRepository.findActiveByParticipantUserIdOrderByLastMessageAtDesc(userId) >> [chatRoom]

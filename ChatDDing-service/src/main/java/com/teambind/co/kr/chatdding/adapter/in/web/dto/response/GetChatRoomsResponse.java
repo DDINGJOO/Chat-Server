@@ -22,7 +22,8 @@ public record GetChatRoomsResponse(
                         r.participantIds(),
                         r.lastMessage(),
                         r.lastMessageAt(),
-                        r.unreadCount()
+                        r.unreadCount(),
+                        r.context() != null ? ContextDto.from(r.context()) : null
                 ))
                 .toList();
 
@@ -36,6 +37,17 @@ public record GetChatRoomsResponse(
             List<Long> participantIds,
             String lastMessage,
             LocalDateTime lastMessageAt,
-            long unreadCount
+            long unreadCount,
+            ContextDto context
     ) {}
+
+    public record ContextDto(
+            String contextType,
+            Long contextId,
+            String contextName
+    ) {
+        public static ContextDto from(GetChatRoomsResult.ContextDto ctx) {
+            return new ContextDto(ctx.contextType(), ctx.contextId(), ctx.contextName());
+        }
+    }
 }

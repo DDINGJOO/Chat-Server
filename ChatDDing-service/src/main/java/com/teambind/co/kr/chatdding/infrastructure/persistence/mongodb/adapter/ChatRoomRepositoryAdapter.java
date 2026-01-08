@@ -56,6 +56,15 @@ public class ChatRoomRepositoryAdapter implements ChatRoomRepository {
     }
 
     @Override
+    public List<ChatRoom> findActiveByParticipantUserIdAndTypeOrderByLastMessageAtDesc(UserId userId, ChatRoomType type) {
+        return mongoRepository.findByParticipantIdsContainingAndStatusAndTypeOrderByLastMessageAtDesc(
+                        userId.getValue(), ChatRoomStatus.ACTIVE, type)
+                .stream()
+                .map(ChatRoomDocument::toDomain)
+                .toList();
+    }
+
+    @Override
     public Optional<ChatRoom> findDmByParticipantIds(List<Long> participantIds) {
         return mongoRepository.findByTypeAndSortedParticipantIds(ChatRoomType.DM, participantIds)
                 .map(ChatRoomDocument::toDomain);

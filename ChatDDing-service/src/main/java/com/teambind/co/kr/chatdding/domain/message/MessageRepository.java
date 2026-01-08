@@ -67,4 +67,14 @@ public interface MessageRepository {
      * 채팅방의 모든 메시지 삭제
      */
     void deleteAllByRoomId(RoomId roomId);
+
+    /**
+     * 채팅방의 안 읽은 메시지를 일괄 읽음 처리
+     *
+     * @param roomId 채팅방 ID
+     * @param userId 읽은 사용자 ID
+     * @param readAt 읽은 시각
+     * @return 업데이트된 메시지 수
+     */
+    int bulkMarkAsRead(RoomId roomId, UserId userId, LocalDateTime readAt);
 }

@@ -39,8 +39,10 @@ public class CreateDmService implements CreateDmUseCase {
         Optional<ChatRoom> existingDm = chatRoomRepository.findDmByParticipantIds(sortedParticipantIds);
 
         if (existingDm.isPresent()) {
-            // 기존 채팅방 반환
-            return CreateDmResult.from(existingDm.get(), false);
+            ChatRoom chatRoom = existingDm.get();
+            // 기존 DM이어도 초기 메시지가 있으면 전송
+            sendInitialMessageIfPresent(command, chatRoom);
+            return CreateDmResult.from(chatRoom, false);
         }
 
         // 새 DM 채팅방 생성

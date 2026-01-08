@@ -31,8 +31,7 @@ public class GetChatRoomsService implements GetChatRoomsUseCase {
 
     @Override
     public GetChatRoomsResult execute(GetChatRoomsQuery query) {
-        List<ChatRoom> chatRooms = chatRoomRepository
-                .findActiveByParticipantUserIdOrderByLastMessageAtDesc(query.userId());
+        List<ChatRoom> chatRooms = fetchChatRooms(query);
 
         List<RoomId> roomIds = chatRooms.stream()
                 .map(ChatRoom::getId)
@@ -45,6 +44,15 @@ public class GetChatRoomsService implements GetChatRoomsUseCase {
                 .toList();
 
         return new GetChatRoomsResult(items);
+    }
+
+    private List<ChatRoom> fetchChatRooms(GetChatRoomsQuery query) {
+        if (query.type() != null) {
+            return chatRoomRepository
+                    .findActiveByParticipantUserIdAndTypeOrderByLastMessageAtDesc(query.userId(), query.type());
+        }
+        return chatRoomRepository
+                .findActiveByParticipantUserIdOrderByLastMessageAtDesc(query.userId());
     }
 
     private GetChatRoomsResult.ChatRoomItem buildChatRoomItem(

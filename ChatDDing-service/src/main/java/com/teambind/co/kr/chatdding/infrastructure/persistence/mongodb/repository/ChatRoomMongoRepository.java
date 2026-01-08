@@ -18,6 +18,9 @@ public interface ChatRoomMongoRepository extends MongoRepository<ChatRoomDocumen
     List<ChatRoomDocument> findByParticipantIdsContainingAndStatusOrderByLastMessageAtDesc(
             Long userId, ChatRoomStatus status);
 
+    List<ChatRoomDocument> findByParticipantIdsContainingAndStatusAndTypeOrderByLastMessageAtDesc(
+            Long userId, ChatRoomStatus status, ChatRoomType type);
+
     Optional<ChatRoomDocument> findByTypeAndSortedParticipantIds(
             ChatRoomType type, List<Long> sortedParticipantIds);
 

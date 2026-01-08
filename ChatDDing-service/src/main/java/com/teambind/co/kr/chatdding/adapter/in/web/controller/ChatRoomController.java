@@ -27,7 +27,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.teambind.co.kr.chatdding.domain.chatroom.ChatRoomType;
 
 /**
  * 채팅방 API Controller (Web Adapter)
@@ -46,13 +49,16 @@ public class ChatRoomController {
      * 채팅방 목록 조회
      *
      * GET /api/v1/rooms
+     * GET /api/v1/rooms?type=DM
+     * GET /api/v1/rooms?type=PLACE_INQUIRY
      */
     @GetMapping
     public ResponseEntity<ApiResponse<GetChatRoomsResponse>> getChatRooms(
-            @RequestHeader("X-User-Id") Long userId
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam(required = false) ChatRoomType type
     ) {
         GetChatRoomsResult result = getChatRoomsUseCase.execute(
-                GetChatRoomsQuery.of(userId)
+                GetChatRoomsQuery.of(userId, type)
         );
 
         return ResponseEntity.ok(ApiResponse.success(GetChatRoomsResponse.from(result)));

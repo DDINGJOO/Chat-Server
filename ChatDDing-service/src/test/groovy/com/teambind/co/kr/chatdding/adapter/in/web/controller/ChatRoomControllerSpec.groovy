@@ -5,6 +5,8 @@ import com.teambind.co.kr.chatdding.application.port.in.GetChatRoomDetailResult
 import com.teambind.co.kr.chatdding.application.port.in.GetChatRoomDetailUseCase
 import com.teambind.co.kr.chatdding.application.port.in.GetChatRoomsResult
 import com.teambind.co.kr.chatdding.application.port.in.GetChatRoomsUseCase
+import com.teambind.co.kr.chatdding.application.port.in.CreateDmUseCase
+import com.teambind.co.kr.chatdding.application.port.in.CreateGroupUseCase
 import com.teambind.co.kr.chatdding.common.exception.ChatException
 import com.teambind.co.kr.chatdding.common.exception.ErrorCode
 import com.teambind.co.kr.chatdding.domain.chatroom.ChatRoomStatus
@@ -24,6 +26,8 @@ class ChatRoomControllerSpec extends Specification {
 
     GetChatRoomsUseCase getChatRoomsUseCase = Mock()
     GetChatRoomDetailUseCase getChatRoomDetailUseCase = Mock()
+    CreateDmUseCase createDmUseCase = Mock()
+    CreateGroupUseCase createGroupUseCase = Mock()
 
     @Subject
     ChatRoomController chatRoomController
@@ -31,7 +35,7 @@ class ChatRoomControllerSpec extends Specification {
     MockMvc mockMvc
 
     def setup() {
-        chatRoomController = new ChatRoomController(getChatRoomsUseCase, getChatRoomDetailUseCase)
+        chatRoomController = new ChatRoomController(getChatRoomsUseCase, getChatRoomDetailUseCase, createDmUseCase, createGroupUseCase)
         mockMvc = MockMvcBuilders.standaloneSetup(chatRoomController)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build()
@@ -48,7 +52,8 @@ class ChatRoomControllerSpec extends Specification {
                         [100L, 200L],
                         "마지막 메시지",
                         LocalDateTime.now(),
-                        3
+                        3,
+                        null
                 ),
                 new GetChatRoomsResult.ChatRoomItem(
                         "1002",
@@ -57,7 +62,8 @@ class ChatRoomControllerSpec extends Specification {
                         [100L, 200L, 300L],
                         "안녕하세요",
                         LocalDateTime.now(),
-                        0
+                        0,
+                        null
                 )
         ]
         def result = new GetChatRoomsResult(chatRooms)

@@ -6,8 +6,6 @@ import com.teambind.co.kr.chatdding.application.port.in.CreatePlaceInquiryUseCas
 import com.teambind.co.kr.chatdding.application.port.in.SendMessageCommand;
 import com.teambind.co.kr.chatdding.application.port.in.SendMessageUseCase;
 import com.teambind.co.kr.chatdding.application.port.out.EventPublisher;
-import com.teambind.co.kr.chatdding.common.exception.ChatException;
-import com.teambind.co.kr.chatdding.common.exception.ErrorCode;
 import com.teambind.co.kr.chatdding.common.util.generator.PrimaryKeyGenerator;
 import com.teambind.co.kr.chatdding.domain.chatroom.ChatRoom;
 import com.teambind.co.kr.chatdding.domain.chatroom.ChatRoomContext;
@@ -33,20 +31,21 @@ public class CreatePlaceInquiryService implements CreatePlaceInquiryUseCase {
 
     @Override
     public CreatePlaceInquiryResult execute(CreatePlaceInquiryCommand command) {
-        validateDuplicateInquiry(command);
+        return chatRoomRepository.findPlaceInquiryByPlaceIdAndGuestId(command.placeId(), command.guestId())
+                .map(existingRoom -> handleExistingInquiry(existingRoom, command))
+                .orElseGet(() -> createNewInquiry(command));
+    }
 
+    private CreatePlaceInquiryResult handleExistingInquiry(ChatRoom existingRoom, CreatePlaceInquiryCommand command) {
+        sendInitialMessageIfPresent(command, existingRoom);
+        return CreatePlaceInquiryResult.from(existingRoom);
+    }
+
+    private CreatePlaceInquiryResult createNewInquiry(CreatePlaceInquiryCommand command) {
         ChatRoom chatRoom = createAndSaveChatRoom(command);
         sendInitialMessageIfPresent(command, chatRoom);
         publishInquiryCreatedEvent(chatRoom);
-
         return CreatePlaceInquiryResult.from(chatRoom);
-    }
-
-    private void validateDuplicateInquiry(CreatePlaceInquiryCommand command) {
-        chatRoomRepository.findPlaceInquiryByPlaceIdAndGuestId(command.placeId(), command.guestId())
-                .ifPresent(existing -> {
-                    throw ChatException.of(ErrorCode.DUPLICATE_INQUIRY);
-                });
     }
 
     private ChatRoom createAndSaveChatRoom(CreatePlaceInquiryCommand command) {

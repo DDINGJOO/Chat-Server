@@ -34,6 +34,14 @@ public interface ChatRoomRepository {
     List<ChatRoom> findActiveByParticipantUserIdOrderByLastMessageAtDesc(UserId userId);
 
     /**
+     * 사용자가 참여중인 활성 채팅방 목록 조회 - 타입 필터링 (최근 메시지 순)
+     *
+     * @param userId 사용자 ID
+     * @param type   채팅방 타입
+     */
+    List<ChatRoom> findActiveByParticipantUserIdAndTypeOrderByLastMessageAtDesc(UserId userId, ChatRoomType type);
+
+    /**
      * DM 중복 체크용: 동일한 참여자 조합의 DM이 존재하는지 확인
      *
      * @param participantIds 정렬된 참여자 ID 목록

@@ -10,9 +10,11 @@ import com.teambind.co.kr.chatdding.infrastructure.persistence.mongodb.repositor
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -55,7 +57,7 @@ public class MessageRepositoryAdapter implements MessageRepository {
 
     @Override
     public List<Message> findByRoomIdBeforeCursor(RoomId roomId, MessageId cursorId, int limit) {
-        Pageable pageable = PageRequest.of(0, limit);
+        Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
         return mongoRepository.findByRoomIdAndIdLessThanOrderByCreatedAtDesc(
                         roomId.getValue(), cursorId.getValue(), pageable)
                 .stream()
@@ -94,5 +96,18 @@ public class MessageRepositoryAdapter implements MessageRepository {
     @Override
     public void deleteAllByRoomId(RoomId roomId) {
         mongoRepository.deleteAllByRoomId(roomId.getValue());
+    }
+
+    @Override
+    public int bulkMarkAsRead(RoomId roomId, UserId userId, LocalDateTime readAt) {
+        Query query = new Query();
+        query.addCriteria(Criteria.where("roomId").is(roomId.getValue()));
+        query.addCriteria(Criteria.where("readBy." + userId.getValue()).exists(false));
+
+        Update update = new Update();
+        update.set("readBy." + userId.getValue(), readAt);
+
+        var result = mongoTemplate.updateMulti(query, update, MessageDocument.class);
+        return (int) result.getModifiedCount();
     }
 }
